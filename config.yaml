@@ -1,0 +1,39 @@
+# config.yaml
+
+app:
+  random_state: 42
+  logging_level: "INFO" 
+
+storage:
+  logs_dir: "logs"
+
+preprocessing:
+  knn_neighbors: 5
+  test_size: 0.2
+  random_state: 42
+
+datasets:
+  koi:
+    file_path: "data/kepler.csv"
+    target_column: "koi_disposition"
+    disposition_mapping:
+      "CONFIRMED": "Confirmed"
+      "CANDIDATE": "Candidate"
+      "FALSE POSITIVE": "False Positive"
+  
+  k2:
+    file_path: "data/k2.csv"
+    target_column: "pl_disposition"
+    disposition_mapping:
+      "CONFIRMED": "Confirmed"
+      "CANDIDATE": "Candidate"
+      "FALSE POSITIVE": "False Positive"
+
+  tess:
+    file_path: "data/toi.csv"
+    target_column: "tfopwg_disp"
+    disposition_mapping:
+      "PC": "Candidate"       
+      "FP": "False Positive"  
+      "KP": "Confirmed"       
+      "APC": "Candidate"
