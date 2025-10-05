@@ -1,70 +1,48 @@
 # model.py
-
 import joblib
 import pandas as pd
 import numpy as np
 
-class ExoplanetModel:
+class ExoplanetPredictor:
     def __init__(self, artifacts_path='artifacts/'):
-        """
-        Carrega o modelo treinado, os transformadores e a lista de colunas.
-        """
-        print("Carregando artefatos do modelo...")
+        """Carrega todos os artefatos do modelo (IA) do disco."""
+        self.model = None
         try:
-            # Carrega todos os 5 artefatos salvos
-            self.model = joblib.load(f'{artifacts_path}exoplanet_super_model.pkl')
+            # Garanta que está carregando o seu melhor modelo XGBoost
+            self.model = joblib.load(f'{artifacts_path}exoplanet_xgboost_best_model.pkl')
             self.imputer = joblib.load(f'{artifacts_path}super_imputer.pkl')
             self.scaler = joblib.load(f'{artifacts_path}super_scaler.pkl')
             self.label_encoder = joblib.load(f'{artifacts_path}super_label_encoder.pkl')
             self.X_columns = joblib.load(f'{artifacts_path}X_columns.pkl')
-            
             print("Modelo e transformadores carregados com sucesso!")
         except FileNotFoundError as e:
-            print(f"Erro Crítico: Não foi possível encontrar um dos arquivos .pkl em '{artifacts_path}'.")
-            print(f"Detalhe do erro: {e}")
-            self.model = None
+            print(f"Erro Crítico ao carregar artefatos: {e}")
 
     def predict(self, input_data):
-        """
-        Faz uma previsão em novos dados de entrada.
-
-        Args:
-            input_data (pd.DataFrame): Um DataFrame com os novos dados.
-
-        Returns:
-            dict: Um dicionário com a previsão e as probabilidades de confiança.
-        """
-        if self.model is None:
-            return {"error": "Modelo não foi carregado. Verifique os logs."}
+        """Faz uma previsão em novos dados, garantindo o formato correto."""
+        if not all([self.model, self.imputer, self.scaler, self.label_encoder, self.X_columns]):
+            return {"error": "Modelo não carregado corretamente."}
 
         try:
-            # Garante que o input_data tenha exatamente as mesmas colunas na mesma ordem
-            # que o modelo foi treinado.
-            input_df = pd.DataFrame(input_data, columns=self.X_columns)
+            # Cria um DataFrame com todas as colunas esperadas, preenchido com NaN
+            input_df = pd.DataFrame(columns=self.X_columns)
+            # Concatena com os dados de entrada, alinhando as colunas
+            input_df = pd.concat([input_df, pd.DataFrame(input_data)], ignore_index=True)
+            # Garante que as colunas estejam na ordem correta e preenche o resto com NaN
+            input_df = input_df[self.X_columns]
 
-            # Aplica a MESMA sequência de transformações dos dados de teste
+            # Aplica o pipeline de transformação
             data_imputed = self.imputer.transform(input_df)
             data_scaled = self.scaler.transform(data_imputed)
 
-            # Faz a previsão numérica e obtém as probabilidades
+            # Faz a previsão e obtém as probabilidades
             prediction_encoded = self.model.predict(data_scaled)
             prediction_proba = self.model.predict_proba(data_scaled)
-
-            # Converte a previsão numérica de volta para o rótulo de texto
             prediction_label = self.label_encoder.inverse_transform(prediction_encoded)[0]
             
-            # Cria um dicionário de confiança para todas as classes
             confidence_scores = {self.label_encoder.classes_[i]: prob for i, prob in enumerate(prediction_proba[0])}
 
-            return {
-                "prediction": prediction_label,
-                "confidence": confidence_scores,
-                "error": None
-            }
-
+            return {"prediction": prediction_label, "confidence": confidence_scores, "error": None}
         except Exception as e:
-            return {
-                "prediction": None,
-                "confidence": None,
-                "error": f"Erro durante a previsão: {e}"
-            }
+            # Return a detailed error if prediction fails
+            return {"prediction": None, "confidence": None, "error": f"Erro durante a previsão: {e}"}

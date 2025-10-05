@@ -1,5 +1,3 @@
-# config.yaml
-
 app:
   random_state: 42
   logging_level: "INFO" 
@@ -23,7 +21,7 @@ datasets:
   
   k2:
     file_path: "data/k2.csv"
-    target_column: "pl_disposition"
+    target_column: "disposition"   # <--- CORRIGIDO
     disposition_mapping:
       "CONFIRMED": "Confirmed"
       "CANDIDATE": "Candidate"
