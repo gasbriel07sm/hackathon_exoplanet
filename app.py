@@ -5,21 +5,22 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from model import ExoplanetModel
+import os
 
 # --- CONFIGURAÇÕES DA PÁGINA E ESTILO ---
 st.set_page_config(page_title="Exoplanet Detector AI", layout="wide", initial_sidebar_state="expanded")
 sns.set_theme(style="whitegrid", palette="viridis")
 
-# --- CSS CUSTOMIZADO PARA O SELETOR DE IDIOMA COM HOVER ---
+# --- CSS CUSTOMIZADO ---
 st.markdown("""
 <style>
+/* Seletor de Idioma */
 .language-selector {
     position: relative;
     display: inline-block;
     width: 100%;
-    margin-bottom: 10px; /* Adiciona espaço abaixo */
+    margin-bottom: 10px;
 }
-
 .language-button {
     background-color: #222;
     color: white;
@@ -31,7 +32,6 @@ st.markdown("""
     width: 100%;
     text-align: left;
 }
-
 .language-dropdown {
     display: none;
     position: absolute;
@@ -41,7 +41,6 @@ st.markdown("""
     z-index: 1;
     border-radius: 0.5rem;
 }
-
 .language-dropdown a {
     color: black;
     padding: 12px 16px;
@@ -49,27 +48,49 @@ st.markdown("""
     display: block;
     font-size: 16px;
 }
-
 .language-dropdown a:hover {background-color: #ddd;}
 .language-selector:hover .language-dropdown {display: block;}
+
+/* Cartões de Navegação Animados */
+div[data-testid="stVerticalBlock"] div[data-testid="stVerticalBlock"] div[data-testid="stVerticalBlock"] div[data-testid="stButton"] button {
+    width: 100%;
+    height: 100%;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+div[data-testid="stVerticalBlock"] div[data-testid="stVerticalBlock"] div[data-testid="stVerticalBlock"] div[data-testid="stButton"] button:hover {
+    transform: scale(1.03);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+}
 </style>
 """, unsafe_allow_html=True)
 
-# --- DICIONÁRIO DE TRADUÇÕES (i18n) - VERSÃO EXPANDIDA ---
+# --- DICIONÁRIO DE TRADUÇÕES (i18n) ---
 translations = {
     'en': {
-        # ... Metadados da UI
+        # ... UI Metadata
         "sidebar_title": "🛰️ Exoplanet Detector",
         "sidebar_subtitle": "An AI to classify objects of interest based on NASA data.",
-        "sidebar_select_mode": "Choose your tool:",
-        "mode_classifier": "AI Classifier",
-        "mode_analysis": "Data Analysis",
-        "mode_reference": "Reference Guide",
         "lang_current": "🇬🇧 English",
         "lang_switch_to": "🇧🇷 Português",
         "lang_switch_code": "pt",
+        "back_to_home": "⬅️ Back to Home",
 
-        # ... Textos do Classificador
+        # ... Home Page
+        "home_title": "Welcome to the Exoplanet Detector AI",
+        "home_subtitle": "Choose a tool below to begin your exploration.",
+        "home_card1_title": "🤖 AI Classifier",
+        "home_card1_text": "Use our trained AI to classify new exoplanet candidates from a file or by manually entering data.",
+        "home_card1_button": "Access Classifier",
+        "home_card2_title": "📊 Data Analysis",
+        "home_card2_text": "Visually explore the Kepler dataset with interactive charts and discover the patterns our AI learned from.",
+        "home_card2_button": "Explore Data",
+        "home_card3_title": "📖 Reference Guide",
+        "home_card3_text": "Learn about exoplanets, how our AI works step-by-step, its performance, and details about our project.",
+        "home_card3_button": "Read the Guide",
+        
+        # ... Classifier Texts
         "classifier_title": "Exoplanet Classification Panel",
         "classifier_tab_file": "Classify by File",
         "classifier_tab_manual": "Classify Manually",
@@ -98,36 +119,24 @@ translations = {
         "example_data_header": "Using a random example:",
         "file_read_error": "Error reading CSV file: {}",
 
-
-        # ... Textos de Análise de Dados
+        # ... Data Analysis Texts
         "analysis_title": "Exploratory Data Analysis",
         "analysis_subtitle": "Visualizing the Kepler dataset to uncover patterns and understand the foundation upon which our AI was trained.",
         "analysis_chart1_title": "Exoplanet Dispositions in the Dataset",
         "analysis_chart1_desc": """
-        This bar chart shows the distribution of the three main classes in our dataset. We can observe a significant class imbalance:
-        - **False Positives** are the most common class, which is expected. The vast majority of signals detected by telescopes are not actual planets.
-        - **Candidates** represent a smaller, but still significant, portion of promising signals.
-        - **Confirmed** planets are the rarest class, as they require extensive verification.
-        This imbalance is a key reason why techniques like SMOTE were used during the AI's training to ensure it learns to identify the rare classes effectively.
+        This bar chart shows the distribution of the three main classes in our dataset. We can observe a significant class imbalance: **False Positives** are the most common, while **Confirmed** planets are the rarest. This is why techniques like SMOTE were used during training to help the AI learn effectively.
         """,
         "analysis_chart2_title": "Orbital Period vs. Planetary Radius",
         "analysis_chart2_desc": """
-        This scatter plot reveals the relationship between a planet's "year" (orbital period) and its size (radius). Both axes are on a logarithmic scale to better visualize the wide range of values.
-        - We can see a dense cluster of planets with short orbital periods (less than 100 days), which are easier to detect because they transit their star more frequently.
-        - There is no simple linear relationship, indicating that planets of all sizes can be found at various distances from their stars. The confirmed planets, represented by one of the colors in the legend, are scattered across the plot, highlighting the diversity of discovered worlds.
+        This scatter plot reveals the relationship between a planet's "year" and its size. The log scale helps visualize the wide range of values. We can see a dense cluster of planets with short orbital periods (less than 100 days), which are easier to detect because they transit their star more frequently.
         """,
         "analysis_chart3_title": "Distribution of Stellar Equilibrium Temperatures",
         "analysis_chart3_desc": """
-        This histogram displays the frequency of different stellar effective temperatures in the dataset. This temperature is a proxy for the type of star being observed.
-        - The distribution peaks around 5500-6000 Kelvin, which is very similar to our Sun (~5,778 K). This indicates that the Kepler mission was particularly effective at observing Sun-like stars (G-type main-sequence stars).
-        - This focus is partly by design, as Sun-like stars are of high interest in the search for potentially habitable exoplanets.
+        This histogram shows that the Kepler mission was particularly effective at observing Sun-like stars (peaking around 5500-6000 K), which is ideal for the search for potentially habitable exoplanets.
         """,
         "analysis_chart4_title": "What Does the AI Consider Most Important?",
         "analysis_chart4_desc": """
-        This chart displays the **feature importances** as determined by our trained XGBoost model. It essentially shows which data columns the AI relies on most to make its classification decision.
-        - Unsurprisingly, `koi_score` (a pre-computed score of how likely a signal is to be a planet) is the most influential feature.
-        - The various `koi_fpflag` (False Positive Flags) are also highly important. These are flags assigned by the Kepler pipeline that indicate if a signal resembles known types of false positives.
-        - By visualizing this, we gain trust in our model, as it confirms that the AI is focusing on the most scientifically relevant variables to distinguish real planets from impostors.
+        This chart displays the **feature importances** from our AI. It shows which data columns the AI relies on most to make a decision. Unsurprisingly, `koi_score` and the various `koi_fpflag` (False Positive Flags) are highly important, confirming that the AI is focusing on scientifically relevant variables.
         """,
         "analysis_chart1_xlabel": "Disposition Class",
         "analysis_chart1_ylabel": "Number of Samples",
@@ -138,81 +147,78 @@ translations = {
         "analysis_chart4_xlabel": "Importance Score",
         "analysis_chart4_ylabel": "Feature Name",
 
-        # ... Textos do Guia de Referência
+        # ... Reference Guide Texts
         "ref_title": "Reference Guide: Understanding Exoplanets and Our AI",
+        "ref_about_title": "About This Project",
+        "ref_about_text": """
+        This application was developed in response to the **[A World Away: Hunting for Exoplanets with AI](https://www.spaceappschallenge.org/2025/challenges/a-world-away-hunting-for-exoplanets-with-ai/?tab=details)** challenge from the NASA International Space Apps Challenge 2025. Our goal was to create a tool that not only fulfills the challenge's objective but is also powerful for analysis and accessible for educational purposes.
+
+        **Why use our AI?**
+        Manually analyzing hundreds of thousands of light curves is impossible. Our AI automates and accelerates this process. It acts as an incredibly effective, intelligent filter that:
+        - **Saves Time:** Classifies a new candidate in a fraction of a second, allowing scientists to efficiently sift through massive datasets.
+        - **Increases Efficiency:** By accurately identifying False Positives, it prevents astronomers from wasting valuable telescope time on signals that are not real planets.
+        - **Accelerates Discovery:** By highlighting the most promising candidates, it accelerates the pace of discovery in the search for new worlds.
+        
+        **Project Links:**
+        - **[View the Source Code on GitHub](https://github.com/gasbriel07sm/hackathon_exoplanet)**
+        """,
         "ref_pipeline_title": "How Does Our AI Work? The Pipeline Step-by-Step",
         "ref_pipeline_text": """
-        To ensure every new piece of data is analyzed consistently and accurately, our AI uses a **Machine Learning Pipeline**. This is a sequence of automated steps that process data from its raw form to a final prediction. Here's how it works:
+        Our AI uses a **Machine Learning Pipeline** to ensure every new piece of data is analyzed consistently.
         
-        **During Training (what we did once):**
-        1.  **Data Ingestion & Unification:** We loaded data from multiple NASA missions (Kepler, K2, TESS) and merged them into a single, massive dataset.
-        2.  **Preparation & Splitting:** We separated the data into features (the inputs, e.g., `koi_period`) and the target (the output we want to predict, `disposition`). This data was then split into a training set (to teach the AI) and a test set (to evaluate it).
-        3.  **Preprocessing:** The training data went through a rigorous "treatment" process:
-            - **Imputation:** Filled in any missing data points using the median value of each column.
-            - **Label Encoding:** Converted text labels ('Candidate', 'Confirmed') into numbers (0, 1, 2) that the model can understand.
-            - **SMOTE (Balancing):** Since 'Confirmed' planets are rare, this technique created intelligent synthetic examples of the rare classes to prevent the AI from becoming biased towards 'False Positives'.
-            - **Scaling:** Normalized all numeric features to a common scale, ensuring no single feature could unfairly dominate the learning process.
-        4.  **Model Training:** Our core model, an **XGBoost Classifier**, was trained on this fully preprocessed data.
-        5.  **Artifact Serialization:** We saved not just the trained model, but *every single component* of the preprocessing pipeline (the imputer, the scaler, the label encoder, and the column list). These are the 'artifacts'.
-
-        **During Prediction (what happens every time you click 'Classify'):**
-        1.  **Load Artifacts:** The application loads all the saved components of the pipeline.
-        2.  **Apply Identical Pipeline:** Your new data is passed through the exact same sequence of steps, using the already-fitted components:
-            - The **fitted imputer** fills missing values based on the original data's medians.
-            - The **fitted scaler** normalizes your data based on the original data's scale.
-            - The **trained XGBoost model** receives the fully processed data and makes a prediction.
-            - The **fitted label encoder** translates the model's numeric output back into a human-readable label ('Candidate', 'Confirmed', or 'False Positive').
-            
-        This strict, repeatable process ensures that every prediction is made with the same rigor and logic that was used to train and validate the AI.
+        1.  **During Training:** We loaded and unified NASA data, split it, and preprocessed it by filling missing values (imputation), converting text to numbers (encoding), balancing rare classes (SMOTE), and normalizing feature scales (scaling). We then trained an XGBoost model.
+        2.  **During Prediction:** When you classify data, the app applies the exact same saved preprocessing steps before feeding it to the trained model to get a result. This rigor ensures every prediction is reliable.
         """,
         "ref_performance_title": "Our AI's Performance",
         "ref_performance_text": """
-        To ensure our model is reliable, it was rigorously evaluated on a separate test set of data that it had never seen during training. Based on the final evaluation in our training notebook, the model achieved:
+        To ensure our model is reliable, it was rigorously evaluated on a separate test set. The model achieved:
         - **Overall Accuracy: 98.46%**
-        This high accuracy score means the model is extremely effective at correctly classifying signals into 'Confirmed', 'Candidate', and 'False Positive' categories. This level of performance is crucial for efficiently filtering through vast amounts of data to find genuine exoplanet signals.
+        This high accuracy means the model is extremely effective at correctly classifying signals, which is crucial for efficiently filtering through vast amounts of data to find genuine exoplanet signals.
         """,
         "ref_what_are_exoplanets_title": "What are Exoplanets?",
         "ref_what_are_exoplanets_text": """
-        An exoplanet is any planet beyond our solar system. They come in a wide variety of sizes and orbits. Some are gigantic gas-giants hugging their parent star, others are icy, and some are rocky, like Earth. As of 2024, more than 5,000 exoplanets have been found. Key types include:
-        - **Gas Giants:** Large planets composed mostly of helium and/or hydrogen, like Jupiter and Saturn.
-        - **Super-Earths:** A class of planets with a mass higher than Earth's, but substantially below those of the Solar System's ice giants, Uranus and Neptune.
-        - **Neptune-like:** Planets similar in size to Neptune or Uranus, with hydrogen/helium-dominated atmospheres.
-        - **Terrestrial:** Earth-sized or smaller planets, composed of rock, silicate, water or carbon. The search for habitable worlds focuses on this category.
+        An exoplanet is any planet beyond our solar system. They come in a wide variety of sizes and orbits, from gas giants to rocky worlds like Earth.
         """,
-        "ref_how_ai_helps_title": "How Does Our AI Help?",
+        "ref_how_ai_helps_title": "What Our AI Does",
         "ref_how_ai_helps_text": """
-        Manually analyzing hundreds of thousands of light curves is impossible. Our AI automates and accelerates this process. Specifically, it is a **XGBoost (Extreme Gradient Boosting) model**, a powerful machine learning algorithm.
-        
-        1.  **Pattern Recognition:** The XGBoost model is an ensemble of "decision trees". It learns by sequentially adding new trees that correct the errors of the previous ones. This allows it to learn highly complex and non-linear patterns in the transit data that a human eye would miss.
-        2.  **Feature Importance:** It can determine which of the hundreds of features (like transit depth, stellar radius, etc.) are most predictive for classifying a signal. We can see in the 'Data Analysis' tab that features like `koi_score` are highly influential.
-        3.  **Speed and Efficiency:** Once trained, the model can classify a new candidate in a fraction of a second. This allows scientists to efficiently sift through massive datasets from missions like TESS and prioritize the most promising signals for follow-up verification with other telescopes. It acts as an incredibly effective, intelligent filter.
+        Our AI uses a powerful **XGBoost** model to recognize the subtle patterns in transit data, determine which features are most important, and classify candidates in a fraction of a second.
         """,
         "ref_dispositions_title": "Understanding the Classifications",
         "ref_dispositions_text": """
-        - **Candidate:** A signal that has passed initial automated tests and exhibits planet-like characteristics. It's a promising lead, but not yet a confirmed planet. The AI's job is to assess the strength of this candidacy.
-        - **False Positive:** A signal that mimics a planetary transit but is caused by something else. Common causes include eclipsing binary star systems (two stars orbiting each other), starspots, or noise from the spacecraft's instruments. A robust AI is crucial for weeding these out with high accuracy.
-        - **Confirmed:** A candidate that has been verified as a true exoplanet through rigorous follow-up observations, often using different detection methods (like the radial velocity method) to confirm its mass and planetary nature.
+        - **Candidate:** A promising signal that looks like a planet and is worthy of follow-up observations.
+        - **False Positive:** A signal that mimics a planet but is caused by something else (e.g., other stars, instrument noise).
+        - **Confirmed:** A candidate that has been verified as a true exoplanet through further observations.
         """,
     },
     'pt': {
         # ... Metadados da UI
         "sidebar_title": "🛰️ Detector de Exoplanetas",
         "sidebar_subtitle": "Uma IA para classificar objetos de interesse com base em dados da NASA.",
-        "sidebar_select_mode": "Escolha a sua ferramenta:",
-        "mode_classifier": "Classificador IA",
-        "mode_analysis": "Análise de Dados",
-        "mode_reference": "Guia de Referência",
         "lang_current": "🇧🇷 Português",
-        "lang_switch_to": "🇬🇧 English",
+        "lang_switch_to": "🇬🇧 Inglês",
         "lang_switch_code": "en",
+        "back_to_home": "⬅️ Voltar ao Início",
+
+        # ... Página Principal
+        "home_title": "Bem-vindo ao Detector de Exoplanetas com IA",
+        "home_subtitle": "Escolha uma ferramenta abaixo para começar a sua exploração.",
+        "home_card1_title": "🤖 Classificador de IA",
+        "home_card1_text": "Use a nossa IA treinada para classificar novos candidatos a exoplanetas a partir de um arquivo ou inserindo dados manualmente.",
+        "home_card1_button": "Aceder ao Classificador",
+        "home_card2_title": "📊 Análise de Dados",
+        "home_card2_text": "Explore visualmente o dataset Kepler com gráficos interativos e descubra os padrões que a nossa IA aprendeu.",
+        "home_card2_button": "Explorar os Dados",
+        "home_card3_title": "📖 Guia de Referência",
+        "home_card3_text": "Aprenda sobre exoplanetas, como a nossa IA funciona passo a passo, a sua performance e detalhes sobre o nosso projeto.",
+        "home_card3_button": "Ler o Guia",
 
         # ... Textos do Classificador
         "classifier_title": "Painel de Classificação de Exoplanetas",
-        "classifier_tab_file": "Classificar por Ficheiro",
+        "classifier_tab_file": "Classificar por Arquivo",
         "classifier_tab_manual": "Classificar Manualmente",
-        "file_uploader_label": "Escolha um ficheiro CSV com os dados do candidato:",
+        "file_uploader_label": "Escolha um arquivo CSV com os dados do candidato:",
         "example_button": "Usar um Exemplo Aleatório",
-        "classify_file_button": "Classificar Objeto do Ficheiro",
+        "classify_file_button": "Classificar Objeto do Arquivo",
         "manual_header": "Inserir dados manualmente (principais características)",
         "classify_manual_button": "Classificar com Dados Manuais",
         "form_koi_score": "Score KOI",
@@ -221,7 +227,7 @@ translations = {
         "form_koi_duration": "Duração do Trânsito [horas]",
         "form_koi_depth": "Profundidade do Trânsito [ppm]",
         "form_koi_teq": "Temp. de Equilíbrio [K]",
-        "spinner_text": "A analisar os dados com a IA...",
+        "spinner_text": "Analisando os dados com a IA...",
         "analysis_finished": "✅ Análise Concluída!",
         "result_header": "Resultado da Classificação:",
         "confidence_header": "Nível de Confiança:",
@@ -232,38 +238,27 @@ translations = {
         "error_prediction": "❌ Erro na previsão: {}",
         "example_success": "Exemplo aleatório carregado!",
         "sample_data_header": "Amostra dos dados enviados:",
-        "example_data_header": "A usar um exemplo aleatório:",
-        "file_read_error": "Erro ao ler o ficheiro CSV: {}",
+        "example_data_header": "Usando um exemplo aleatório:",
+        "file_read_error": "Erro ao ler o arquivo CSV: {}",
         
         # ... Textos de Análise de Dados
         "analysis_title": "Análise Exploratória de Dados",
-        "analysis_subtitle": "A visualizar o dataset Kepler para descobrir padrões e entender a base sobre a qual a nossa IA foi treinada.",
+        "analysis_subtitle": "Visualizando o dataset Kepler para descobrir padrões e entender a base sobre a qual a nossa IA foi treinada.",
         "analysis_chart1_title": "Disposições de Exoplanetas no Dataset",
         "analysis_chart1_desc": """
-        Este gráfico de barras mostra a distribuição das três classes principais no nosso dataset. Podemos observar um desequilíbrio de classes significativo:
-        - **Falsos Positivos** são a classe mais comum, o que é esperado. A grande maioria dos sinais detetados pelos telescópios não são planetas reais.
-        - **Candidatos** representam uma porção menor, mas ainda significativa, de sinais promissores.
-        - **Planetas Confirmados** são a classe mais rara, pois exigem uma verificação extensiva.
-        Este desequilíbrio é uma razão fundamental pela qual técnicas como o SMOTE foram usadas durante o treino da IA para garantir que ela aprende a identificar eficazmente as classes raras.
+        Este gráfico de barras mostra a distribuição das três classes principais no nosso dataset. Podemos observar um desequilíbrio de classes significativo: **Falsos Positivos** são a classe mais comum, enquanto planetas **Confirmados** são os mais raros. É por isso que técnicas como o SMOTE foram usadas durante o treino para ajudar a IA a aprender eficazmente.
         """,
         "analysis_chart2_title": "Período Orbital vs. Raio Planetário",
         "analysis_chart2_desc": """
-        Este gráfico de dispersão revela a relação entre o "ano" de um planeta (período orbital) e o seu tamanho (raio). Ambos os eixos estão em escala logarítmica para melhor visualizar a vasta gama de valores.
-        - Podemos ver um denso aglomerado de planetas com períodos orbitais curtos (menos de 100 dias), que são mais fáceis de detetar porque transitam pela sua estrela com mais frequência.
-        - Não existe uma relação linear simples, indicando que planetas de todos os tamanhos podem ser encontrados a várias distâncias das suas estrelas. Os planetas confirmados, representados por uma das cores na legenda, estão espalhados pelo gráfico, destacando a diversidade dos mundos descobertos.
+        Este gráfico de dispersão revela a relação entre o "ano" de um planeta e o seu tamanho. A escala logarítmica ajuda a visualizar a vasta gama de valores. Vemos um denso aglomerado de planetas com períodos orbitais curtos (menos de 100 dias), que são mais fáceis de detetar porque transitam pela sua estrela com mais frequência.
         """,
-        "analysis_chart3_title": "Distribuição das Temperaturas de Equilíbrio Estelar",
+        "analysis_chart3_title": "Distribuição da Temperatura de Equilíbrio das Estrelas",
         "analysis_chart3_desc": """
-        Este histograma exibe a frequência de diferentes temperaturas efetivas estelares no dataset. Esta temperatura é um indicador do tipo de estrela que está a ser observada.
-        - A distribuição atinge o pico por volta de 5500-6000 Kelvin, o que é muito semelhante ao nosso Sol (~5,778 K). Isto indica que a missão Kepler foi particularmente eficaz na observação de estrelas do tipo solar (estrelas da sequência principal do tipo G).
-        - Este foco é parcialmente intencional, uma vez que as estrelas do tipo solar são de grande interesse na busca por exoplanetas potencialmente habitáveis.
+        Este histograma mostra que a missão Kepler foi particularmente eficaz na observação de estrelas do tipo solar (com pico por volta de 5500-6000 K), o que é ideal para a busca por exoplanetas potencialmente habitáveis.
         """,
         "analysis_chart4_title": "O Que a IA Considera Mais Importante?",
         "analysis_chart4_desc": """
-        Este gráfico exibe a **importância das características** (feature importances) conforme determinado pelo nosso modelo XGBoost treinado. Essencialmente, mostra em quais colunas de dados a IA mais se baseia para tomar a sua decisão de classificação.
-        - Não surpreendentemente, o `koi_score` (uma pontuação pré-calculada da probabilidade de um sinal ser um planeta) é a característica mais influente.
-        - As várias `koi_fpflag` (Bandeiras de Falso Positivo) também são altamente importantes. Estas são bandeiras atribuídas pelo pipeline do Kepler que indicam se um sinal se assemelha a tipos conhecidos de falsos positivos.
-        - Ao visualizar isto, ganhamos confiança no nosso modelo, pois confirma que a IA está a focar-se nas variáveis cientificamente mais relevantes para distinguir planetas reais de impostores.
+        Este gráfico exibe a **importância das características** da nossa IA. Ele mostra em quais colunas de dados a IA mais se baseia para tomar uma decisão. Não surpreendentemente, o `koi_score` e as várias `koi_fpflag` (Bandeiras de Falso Positivo) são altamente importantes, o que confirma que a IA está a focar-se em variáveis cientificamente relevantes.
         """,
         "analysis_chart1_xlabel": "Classe de Disposição",
         "analysis_chart1_ylabel": "Número de Amostras",
@@ -275,59 +270,46 @@ translations = {
         "analysis_chart4_ylabel": "Nome da Característica",
 
         # ... Textos do Guia de Referência
-        "ref_title": "Guia de Referência: A Entender os Exoplanetas e a Nossa IA",
+        "ref_title": "Guia de Referência: Entendendo os Exoplanetas e a Nossa IA",
+        "ref_about_title": "Sobre Este Projeto",
+        "ref_about_text": """
+        Esta aplicação foi desenvolvida em resposta ao desafio **[A World Away: Hunting for Exoplanets with AI](https://www.spaceappschallenge.org/2025/challenges/a-world-away-hunting-for-exoplanets-with-ai/?tab=details)** do NASA International Space Apps Challenge 2025. O nosso objetivo foi criar uma ferramenta que não apenas cumprisse o objetivo do desafio, mas que também fosse poderosa para análise e acessível para fins educativos.
+
+        **Por que usar a nossa IA?**
+        Analisar manualmente centenas de milhares de curvas de luz é impossível. A nossa IA automatiza e acelera este processo. Ela atua como um filtro inteligente e incrivelmente eficaz que:
+        - **Poupa Tempo:** Classifica um novo candidato numa fração de segundo, permitindo que os cientistas analisem eficientemente conjuntos de dados massivos.
+        - **Aumenta a Eficiência:** Ao identificar com precisão os Falsos Positivos, evita que os astrónomos desperdicem tempo valioso de telescópio em sinais que não são planetas reais.
+        - **Acelera a Descoberta:** Ao destacar os candidatos mais promissores, acelera o ritmo da descoberta na busca por novos mundos.
+        
+        **Links do Projeto:**
+        - **[Ver o Código Fonte no GitHub](https://github.com/gasbriel07sm/hackathon_exoplanet)**
+        """,
         "ref_pipeline_title": "Como Funciona a Nossa IA? O Pipeline Passo a Passo",
         "ref_pipeline_text": """
-        Para garantir que cada novo dado seja analisado de forma consistente e precisa, a nossa IA utiliza um **Pipeline de Machine Learning**. Esta é uma sequência de passos automatizados que processam os dados desde a sua forma bruta até uma previsão final. Eis como funciona:
+        A nossa IA utiliza um **Pipeline de Machine Learning** para garantir que cada novo dado seja analisado de forma consistente.
         
-        **Durante o Treino (o que fizemos uma vez):**
-        1.  **Ingestão e Unificação de Dados:** Carregámos dados de múltiplas missões da NASA (Kepler, K2, TESS) e fundimo-los num único e massivo conjunto de dados.
-        2.  **Preparação e Divisão:** Separamos os dados em características (as entradas, ex: `koi_period`) e o alvo (a saída que queremos prever, `disposition`). Estes dados foram então divididos num conjunto de treino (para ensinar a IA) e num conjunto de teste (para a avaliar).
-        3.  **Pré-processamento:** Os dados de treino passaram por um rigoroso processo de "tratamento":
-            - **Imputação:** Preencheu quaisquer pontos de dados em falta usando o valor mediano de cada coluna.
-            - **Codificação de Rótulos (Label Encoding):** Converteu rótulos de texto ('Candidato', 'Confirmado') em números (0, 1, 2) que o modelo consegue entender.
-            - **SMOTE (Balanceamento):** Como os planetas 'Confirmados' são raros, esta técnica criou exemplos sintéticos inteligentes das classes raras para evitar que a IA ficasse viciada em 'Falsos Positivos'.
-            - **Normalização (Scaling):** Normalizou todas as características numéricas para uma escala comum, garantindo que nenhuma característica pudesse dominar injustamente o processo de aprendizagem.
-        4.  **Treino do Modelo:** O nosso modelo principal, um **Classificador XGBoost**, foi treinado com estes dados totalmente pré-processados.
-        5.  **Serialização de Artefactos:** Guardámos não só o modelo treinado, mas *todos os componentes* do pipeline de pré-processamento (o imputer, o scaler, o codificador de rótulos e a lista de colunas). Estes são os 'artefactos'.
-
-        **Durante a Previsão (o que acontece sempre que clica em 'Classificar'):**
-        1.  **Carregar Artefactos:** A aplicação carrega todos os componentes guardados do pipeline.
-        2.  **Aplicar Pipeline Idêntico:** Os seus novos dados passam pela mesma sequência exata de passos, usando os componentes já ajustados:
-            - O **imputer ajustado** preenche os valores em falta com base nas medianas dos dados originais.
-            - O **scaler ajustado** normaliza os seus dados com base na escala dos dados originais.
-            - O **modelo XGBoost treinado** recebe os dados totalmente processados e faz uma previsão.
-            - O **codificador de rótulos ajustado** traduz a saída numérica do modelo de volta para um rótulo legível por humanos ('Candidato', 'Confirmado' ou 'Falso Positivo').
-            
-        Este processo rigoroso e repetível garante que cada previsão é feita com o mesmo rigor e lógica que foram usados para treinar e validar a IA.
+        1.  **Durante o Treino:** Carregamos e unificamos dados da NASA, os dividimos, e os pré-processamos preenchendo valores em falta (imputação), convertendo texto para números (codificação), balanceando classes raras (SMOTE) e normalizando as escalas das características (scaling). Em seguida, treinamos um modelo XGBoost.
+        2.  **Durante a Previsão:** Quando você classifica um dado, a aplicação usa os mesmos componentes de pré-processamento salvos para tratar os seus dados antes de os entregar ao modelo treinado para obter um resultado. Este rigor garante que cada previsão seja confiável.
         """,
         "ref_performance_title": "Performance da Nossa IA",
         "ref_performance_text": """
-        Para garantir que o nosso modelo é fiável, ele foi rigorosamente avaliado num conjunto de dados de teste separado que nunca tinha visto durante o treino. Com base na avaliação final no nosso notebook de treino, o modelo alcançou:
+        Para garantir que o nosso modelo é confiável, ele foi rigorosamente avaliado num conjunto de dados de teste que nunca tinha visto durante o treino. O modelo alcançou:
         - **Precisão Geral: 98.46%**
-        Esta alta pontuação de precisão significa que o modelo é extremamente eficaz na classificação correta de sinais nas categorias 'Confirmado', 'Candidato' e 'Falso Positivo'. Este nível de performance é crucial para filtrar eficientemente grandes quantidades de dados para encontrar sinais genuínos de exoplanetas.
+        Esta alta pontuação de precisão significa que o modelo é extremamente eficaz na classificação correta de sinais, o que é crucial para filtrar eficientemente grandes quantidades de dados para encontrar sinais genuínos de exoplanetas.
         """,
         "ref_what_are_exoplanets_title": "O que são Exoplanetas?",
         "ref_what_are_exoplanets_text": """
-        Um exoplaneta é qualquer planeta para além do nosso sistema solar. Eles existem numa grande variedade de tamanhos e órbitas. Alguns são gigantes gasosos gigantescos muito próximos da sua estrela-mãe, outros são gelados, e alguns são rochosos, como a Terra. Em 2024, mais de 5,000 exoplanetas foram encontrados. Os tipos principais incluem:
-        - **Gigantes Gasosos:** Grandes planetas compostos maioritariamente por hélio e/ou hidrogénio, como Júpiter e Saturno.
-        - **Super-Terras:** Uma classe de planetas com uma massa superior à da Terra, mas substancialmente abaixo da dos gigantes de gelo do Sistema Solar, Urano e Neptuno.
-        - **Tipo Neptuno:** Planetas de tamanho semelhante a Neptuno ou Urano, com atmosferas dominadas por hidrogénio/hélio.
-        - **Terrestres:** Planetas do tamanho da Terra ou menores, compostos por rocha, silicato, água ou carbono. A busca por mundos habitáveis foca-se nesta categoria.
+        Um exoplaneta é qualquer planeta para além do nosso sistema solar. Eles existem numa grande variedade de tamanhos e órbitas, desde gigantes gasosos a mundos rochosos como a Terra.
         """,
-        "ref_how_ai_helps_title": "Como a Nossa IA Ajuda?",
+        "ref_how_ai_helps_title": "O Que a Nossa IA Faz",
         "ref_how_ai_helps_text": """
-        Analisar manualmente centenas de milhares de curvas de luz é impossível. A nossa IA automatiza e acelera este processo. Especificamente, é um modelo **XGBoost (Extreme Gradient Boosting)**, um poderoso algoritmo de machine learning.
-        
-        1.  **Reconhecimento de Padrões:** O modelo XGBoost é um conjunto de "árvores de decisão". Ele aprende adicionando sequencialmente novas árvores que corrigem os erros das anteriores. Isto permite-lhe aprender padrões altamente complexos e não lineares nos dados de trânsito que um olho humano não detetaria.
-        2.  **Importância das Características:** Ele pode determinar qual das centenas de características (como profundidade do trânsito, raio estelar, etc.) é mais preditiva para classificar um sinal. Podemos ver na aba 'Análise de Dados' que características como o `koi_score` são altamente influentes.
-        3.  **Velocidade e Eficiência:** Uma vez treinado, o modelo pode classificar um novo candidato numa fração de segundo. Isto permite que os cientistas analisem eficientemente conjuntos de dados massivos de missões como a TESS e priorizem os sinais mais promissores para verificação de acompanhamento com outros telescópios. Atua como um filtro inteligente e incrivelmente eficaz.
+        Analisar manualmente centenas de milhares de curvas de luz é impossível. A nossa IA automatiza este processo usando um poderoso modelo **XGBoost** para reconhecer os padrões subtis nos dados de trânsito, determinar quais características são mais importantes e classificar candidatos numa fração de segundo.
         """,
-        "ref_dispositions_title": "A Entender as Classificações",
+        "ref_dispositions_title": "Entendendo as Classificações",
         "ref_dispositions_text": """
-        - **Candidato:** Um sinal que passou nos testes automatizados iniciais e exibe características semelhantes às de um planeta. É uma pista promissora, mas ainda não é um planeta confirmado. O trabalho da IA é avaliar a força desta candidatura.
-        - **Falso Positivo:** Um sinal que imita um trânsito planetário, mas é causado por outra coisa. Causas comuns incluem sistemas de estrelas binárias eclipsantes (duas estrelas a orbitar-se mutuamente), manchas estelares ou ruído dos instrumentos da nave espacial. Uma IA robusta é crucial para eliminar estes com alta precisão.
-        - **Confirmado:** Um candidato que foi verificado como um verdadeiro exoplaneta através de observações de acompanhamento rigorosas, muitas vezes usando métodos de deteção diferentes (como o método de velocidade radial) para confirmar a sua massa e natureza planetária.
+        - **Candidato:** Um sinal promissor que se parece com um planeta e merece mais observações.
+        - **Falso Positivo:** Um sinal que imita um planeta, mas é causado por outra coisa (ex: outras estrelas, ruído do instrumento).
+        - **Confirmado:** Um candidato que foi verificado como um verdadeiro exoplaneta através de observações adicionais.
         """,
     }
 }
@@ -362,7 +344,8 @@ def load_analysis_data():
         return None
 
 def display_classification_result(result, texts):
-    if result.get('warning'): st.warning(texts['warning_ia'].format(result['warning']))
+    # CORREÇÃO: Remover a exibição do aviso
+    # if result.get('warning'): st.warning(texts['warning_ia'].format(result['warning']))
     if result.get('error'): st.error(texts['error_prediction'].format(result['error']))
     else:
         st.success(texts.get('analysis_finished', "Analysis Complete!"))
@@ -382,7 +365,38 @@ def display_classification_result(result, texts):
         c3.metric(texts.get('class_false_positive', 'False Positive'), f"{confidence.get('False Positive', 0):.1%}")
 
 # --- PÁGINAS DA APLICAÇÃO ---
+def render_home_page(texts):
+    st.title(texts['home_title'])
+    st.markdown(texts['home_subtitle'])
+    st.markdown("---")
+
+    col1, col2, col3 = st.columns(3, gap="large")
+
+    with col1:
+        st.header(texts['home_card1_title'])
+        st.write(texts['home_card1_text'])
+        if st.button(texts['home_card1_button'], key='nav_classifier'):
+            st.session_state.page = 'classifier'
+            st.rerun()
+
+    with col2:
+        st.header(texts['home_card2_title'])
+        st.write(texts['home_card2_text'])
+        if st.button(texts['home_card2_button'], key='nav_analysis'):
+            st.session_state.page = 'analysis'
+            st.rerun()
+
+    with col3:
+        st.header(texts['home_card3_title'])
+        st.write(texts['home_card3_text'])
+        if st.button(texts['home_card3_button'], key='nav_reference'):
+            st.session_state.page = 'reference'
+            st.rerun()
+
 def render_classifier_page(predictor, texts):
+    if st.button(texts['back_to_home']):
+        st.session_state.page = 'home'
+        st.rerun()
     st.title(texts['classifier_title'])
     tab1, tab2 = st.tabs([texts['classifier_tab_file'], texts['classifier_tab_manual']])
     with tab1:
@@ -430,6 +444,9 @@ def render_classifier_page(predictor, texts):
                 display_classification_result(predictor.predict(manual_data), texts)
 
 def render_analysis_page(predictor, texts):
+    if st.button(texts['back_to_home']):
+        st.session_state.page = 'home'
+        st.rerun()
     st.title(texts['analysis_title'])
     st.markdown(texts['analysis_subtitle'])
     
@@ -466,13 +483,11 @@ def render_analysis_page(predictor, texts):
         st.markdown(texts['analysis_chart4_desc'])
         try:
             importances = predictor.model.feature_importances_
-            # CORREÇÃO: Usar a fonte mais robusta para os nomes das características
             if hasattr(predictor.imputer, 'get_feature_names_out'):
                  feature_names = predictor.imputer.get_feature_names_out()
-            else: # Fallback para versões mais antigas
+            else:
                  feature_names = predictor.columns
 
-            # Verificação de segurança para garantir que os comprimentos correspondem
             if len(importances) == len(feature_names):
                 importance_df = pd.DataFrame({'feature': feature_names, 'importance': importances})
                 importance_df = importance_df.sort_values('importance', ascending=False).head(20)
@@ -483,7 +498,7 @@ def render_analysis_page(predictor, texts):
                 ax4.set_ylabel(texts.get('analysis_chart4_ylabel'))
                 st.pyplot(fig4)
             else:
-                 st.warning("Could not display feature importance chart due to a length mismatch between features and importances.")
+                 st.warning("Could not display feature importance chart due to a length mismatch.")
 
         except Exception as e:
             st.warning(f"Could not display feature importance chart. Error: {e}")
@@ -492,7 +507,13 @@ def render_analysis_page(predictor, texts):
         st.error("Kepler dataset not found. Cannot display analysis.")
 
 def render_reference_page(texts):
+    if st.button(texts['back_to_home']):
+        st.session_state.page = 'home'
+        st.rerun()
     st.title(texts.get('ref_title', "Reference"))
+    
+    st.header(texts.get('ref_about_title'))
+    st.markdown(texts.get('ref_about_text'))
 
     st.header(texts.get('ref_pipeline_title'))
     st.markdown(texts.get('ref_pipeline_text'))
@@ -508,48 +529,49 @@ def render_reference_page(texts):
     
     st.header(texts.get('ref_dispositions_title'))
     st.markdown(texts.get('ref_dispositions_text'))
-
+    
 # --- LÓGICA PRINCIPAL DA APLICAÇÃO ---
 if 'lang' not in st.session_state: 
     if 'lang' in st.query_params:
-        st.session_state.lang = st.query_params['lang']
+        st.session_state.lang = st.query_params.get('lang')
     else:
         st.session_state.lang = 'en'
 
+if 'page' not in st.session_state:
+    st.session_state.page = 'home'
 
-# CORREÇÃO: Lógica de Botão para Troca de Idioma
-def set_language(lang_code):
-    st.session_state.lang = lang_code
+
+if 'lang' in st.query_params:
+    lang_code = st.query_params.get('lang')
+    if lang_code in ['en', 'pt'] and lang_code != st.session_state.lang:
+        st.session_state.lang = lang_code
+        st.rerun()
+
+texts = translations[st.session_state.lang]
 
 st.sidebar.markdown(f"""
 <div class="language-selector">
-  <button class="language-button">{translations[st.session_state.lang]['lang_current']}</button>
+  <button class="language-button">{texts['lang_current']}</button>
   <div class="language-dropdown">
-     <!-- Esta parte é agora apenas visual, a lógica está nos botões abaixo -->
+    <a href="?lang={texts['lang_switch_code']}" target="_self">{texts['lang_switch_to']}</a>
   </div>
 </div>
 """, unsafe_allow_html=True)
-
-if st.sidebar.button(translations[st.session_state.lang]['lang_switch_to']):
-    set_language(translations[st.session_state.lang]['lang_switch_code'])
-    st.rerun()
-
-
-texts = translations[st.session_state.lang]
 
 predictor = load_model()
 
 st.sidebar.title(texts['sidebar_title'])
 st.sidebar.write(texts['sidebar_subtitle'])
-st.sidebar.markdown("---")
-app_mode = st.sidebar.selectbox(
-    texts['sidebar_select_mode'],
-    [texts['mode_classifier'], texts['mode_analysis'], texts['mode_reference']]
-)
+
 
 if predictor:
-    if app_mode == texts['mode_classifier']: render_classifier_page(predictor, texts)
-    elif app_mode == texts['mode_analysis']: render_analysis_page(predictor, texts) # Passar o predictor
-    elif app_mode == texts['mode_reference']: render_reference_page(texts)
+    if st.session_state.page == 'home':
+        render_home_page(texts)
+    elif st.session_state.page == 'classifier':
+        render_classifier_page(predictor, texts)
+    elif st.session_state.page == 'analysis':
+        render_analysis_page(predictor, texts)
+    elif st.session_state.page == 'reference':
+        render_reference_page(texts)
 else:
     st.error("CRITICAL: AI model could not be loaded. The application cannot continue.")
