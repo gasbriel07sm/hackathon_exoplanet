@@ -1,15 +1,9 @@
-# Essenciais para a aplicação web
-streamlit
-
-# Essenciais para manipulação de dados e ML
 pandas
+numpy
+pyyaml
 scikit-learn
 imblearn
-joblib
-
-# Para carregar a configuração
-pyyaml
-
-# Opcional: Adicione a versão exata para garantir a compatibilidade
-# Exemplo: pandas==2.1.0
-# Para descobrir suas versões, rode no terminal: pip freeze```
+xgboost
+streamlit
+plotly
+loguru
