@@ -1,9 +1,6 @@
-pandas
-numpy
-pyyaml
-scikit-learn
-imblearn
-xgboost
 streamlit
-plotly
-loguru
+pandas
+scikit-learn
+xgboost
+matplotlib
+seaborn
