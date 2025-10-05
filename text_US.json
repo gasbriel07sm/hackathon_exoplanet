@@ -1,0 +1,17 @@
+{
+    "0":"Exoplanet Detector",
+    "1":"🛰️ Artificial Inteligence based Exoplanet Detector",
+    "2":"This aplication uses a Machine learning model trained from NASA missions Kepler, K2 e TESS\nto classify objects of interest. Upload a CSV file with the data of a\nnew candidate to get a prediction\n",
+    "3":"Choose a CSV file with data of the Exoplanet candidate",
+    "4":"Use a random example",
+    "5":"Uploaded data sample:",
+    "6":"Using a random object from Kepler dataset",
+    "7":"Classify Object",
+    "8":"Analyzing the data",
+    "9":"Analysis concluded!",
+    "10":"Classification Results:",
+    "11":"Candidate",
+    "12":"Confirmed",
+    "13":"False Positive",
+    "14":"Confidence levels:"
+}
