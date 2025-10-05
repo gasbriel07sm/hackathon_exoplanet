@@ -44,20 +44,21 @@ if st.button("Usar um Exemplo Aleatório"):
     st.session_state.sample = sample # Salva o exemplo no estado da sessão
     uploaded_file = None # Limpa o uploader para usar o exemplo
 
-if uploaded_file is not None or 'sample' in st.session_state:
-    if uploaded_file is not None:
-        try:
-            input_df = pd.read_csv(uploaded_file)
-            st.write("Amostra dos dados enviados:")
-            st.dataframe(input_df.head())
-        except Exception as e:
-            st.error(f"Erro ao ler o arquivo CSV: {e}")
-            input_df = None
-    else: # Usa o exemplo
-        input_df = st.session_state.sample
-        st.write("Usando um exemplo aleatório do dataset Kepler:")
-        st.dataframe(input_df)
 
+if uploaded_file is not None:
+    try:
+        input_df = pd.read_csv(uploaded_file)
+        st.write("Amostra dos dados enviados:")
+        st.dataframe(input_df.head())
+    except Exception as e:
+        st.error(f"Erro ao ler o arquivo CSV: {e}")
+        input_df = None
+else: # Usa o exemplo
+    input_df = st.session_state.sample
+    st.write("Usando um exemplo aleatório do dataset Kepler:")
+    st.dataframe(input_df)
+    
+if 'sample' in st.session_state:
     if input_df is not None:
         # Botão para iniciar a classificação
         if st.button("Classificar Objeto"):
